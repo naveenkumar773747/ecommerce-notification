@@ -1,6 +1,6 @@
 package com.ecommerce.notification.repository;
 
-import com.ecommerce.shared.enums.OrderStatus;
+import com.ecommerce.shared.enums.OrderStatusEnum;
 import com.ecommerce.shared.model.Order;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -18,7 +18,7 @@ public class OrderRepository {
         this.mongoTemplate = mongoTemplate;
     }
 
-    public Mono<Void> updateStatusById(String orderId, OrderStatus status) {
+    public Mono<Void> updateStatusById(String orderId, OrderStatusEnum status) {
         Query query = new Query(Criteria.where("_id").is(orderId));
         Update update = new Update().set("status", status);
         return mongoTemplate.updateFirst(query, update, Order.class)

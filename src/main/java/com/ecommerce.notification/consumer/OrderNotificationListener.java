@@ -40,11 +40,11 @@ public class OrderNotificationListener {
                         OrderPlacedEvent event = objectMapper.readValue(message, OrderPlacedEvent.class);
                         log.info("Consumed event : {}", event);
                         return notificationService.sendOrderConfirmation(
-                                        "naveenkumar773747@gmail.com",
+                                        event.getBillingInfo().getBillingEmail(),
                                         "Order Confirmation",
                                         event
                                 )
-                                .then(orderService.updateOrderStatus(event.getOrderId()))
+                                .then(orderService.updateOrderStatusEnum(event.getOrderId()))
                                 .doOnSuccess(unused -> record.receiverOffset().acknowledge());
                     } catch (Exception e) {
                         log.error("Failed to parse Kafka message : {}", e.getMessage());

@@ -1,7 +1,7 @@
 package com.ecommerce.notification.service;
 
 import com.ecommerce.notification.repository.OrderRepository;
-import com.ecommerce.shared.enums.OrderStatus;
+import com.ecommerce.shared.enums.OrderStatusEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -16,9 +16,9 @@ public class OrderService {
         this.orderRepository = orderRepository;
     }
 
-    public Mono<Void> updateOrderStatus(String orderId) {
+    public Mono<Void> updateOrderStatusEnum(String orderId) {
 
-        return orderRepository.updateStatusById(orderId, OrderStatus.CONFIRMED)
+        return orderRepository.updateStatusById(orderId, OrderStatusEnum.CONFIRMED)
                 .doOnSuccess(any -> log.info("Order Status updated to Confirmed for id : {}", orderId))
                 .doOnError(err -> log.error("Error occurred while updating order status for id : {}", orderId));
     }
