@@ -23,7 +23,7 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
 
-    @Value("${spring.kafka.topic.order-placed}")
+    @Value("${spring.kafka.topic.order}")
     private String topic;
 
     @Bean
