@@ -1,6 +1,6 @@
 package com.ecommerce.notification.service;
 
-import com.ecommerce.shared.events.OrderPlacedEvent;
+import com.ecommerce.shared.events.OrderEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
@@ -16,18 +16,32 @@ public class NotificationService {
     @Autowired
     private JavaMailSender mailSender;
 
-    public Mono<Void> sendOrderConfirmation(String to, String subject, OrderPlacedEvent text) {
-        log.info("Sending mail to Naveen : {}", text);
+    public Mono<Void> sendOrderPlacedNotification(String to, OrderEvent event) {
+        return sendEmail(to, "E-COMMERCE : Order Placed", event);
+    }
+
+    public Mono<Void> sendPaymentConfirmedNotification(String to, OrderEvent event) {
+        return sendEmail(to, "E-COMMERCE : Payment Confirmed", event);
+    }
+
+    public Mono<Void> sendDeliveryCompletedNotification(String to, OrderEvent event) {
+        return sendEmail(to, "E-COMMERCE : Order Delivered", event);
+    }
+
+    private Mono<Void> sendEmail(String to, String subject, OrderEvent event) {
+        log.info("Sending order update mail to {} : {}", event.getBillingInfo().getBillingName(), event);
+
         return Mono.fromRunnable(() -> {
                     SimpleMailMessage message = new SimpleMailMessage();
                     message.setTo(to);
                     message.setSubject(subject);
-                    message.setText(text.toString());
+                    message.setText(event.toString());
                     mailSender.send(message);
                 })
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnSuccess(unused -> log.info("Email sent successfully"))
-                .doOnError(error -> log.error("Failed to send email", error))
+                .doOnSuccess(unused -> log.info("Email sent successfully for {}", subject))
+                .doOnError(error -> log.error("Failed to send email for {}", subject, error))
                 .then();
     }
+
 }

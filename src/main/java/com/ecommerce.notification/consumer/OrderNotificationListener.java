@@ -2,13 +2,16 @@ package com.ecommerce.notification.consumer;
 
 import com.ecommerce.notification.service.NotificationService;
 import com.ecommerce.notification.service.OrderService;
-import com.ecommerce.shared.events.OrderPlacedEvent;
+import com.ecommerce.shared.events.OrderEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.kafka.receiver.KafkaReceiver;
+
+import static com.ecommerce.shared.enums.OrderStatusEnum.COMPLETED;
+import static com.ecommerce.shared.enums.OrderStatusEnum.CONFIRMED;
 
 @Service
 @Slf4j
@@ -35,19 +38,46 @@ public class OrderNotificationListener {
         kafkaReceiver
                 .receive()
                 .flatMap(record -> {
+                    String message = record.value();
+
                     try {
-                        String message = record.value();
-                        OrderPlacedEvent event = objectMapper.readValue(message, OrderPlacedEvent.class);
+                        OrderEvent event = objectMapper.readValue(message, OrderEvent.class);
                         log.info("Consumed event : {}", event);
-                        return notificationService.sendOrderConfirmation(
-                                        event.getBillingInfo().getBillingEmail(),
-                                        "Order Confirmation",
-                                        event
-                                )
-                                .then(orderService.updateOrderStatusEnum(event.getOrderId()))
-                                .doOnSuccess(unused -> record.receiverOffset().acknowledge());
+
+                        Mono<Void> processingMono;
+
+                        switch (event.getStatus()) {
+                            case PLACED -> processingMono =
+                                    notificationService.sendOrderPlacedNotification(
+                                            event.getBillingInfo().getBillingEmail(),
+                                            event
+                                    ).then();
+
+                            case CONFIRMED -> processingMono =
+                                    notificationService.sendPaymentConfirmedNotification(
+                                            event.getBillingInfo().getBillingEmail(),
+                                            event
+                                    ).then(orderService.updateOrderStatusEnum(event.getOrderId(), CONFIRMED));
+
+                            case COMPLETED -> processingMono =
+                                    notificationService.sendDeliveryCompletedNotification(
+                                            event.getBillingInfo().getBillingEmail(),
+                                            event
+                                    ).then(orderService.updateOrderStatusEnum(event.getOrderId(), COMPLETED));
+
+                            default -> {
+                                log.info("Skipping unsupported order status: {}", event.getStatus());
+                                record.receiverOffset().acknowledge();
+                                return Mono.empty(); // no-op
+                            }
+                        }
+
+                        return processingMono
+                                .doOnSuccess(unused -> record.receiverOffset().acknowledge())
+                                .doOnError(error -> log.error("Processing failed: {}", error.getMessage(), error));
+
                     } catch (Exception e) {
-                        log.error("Failed to parse Kafka message : {}", e.getMessage());
+                        log.error("Failed to parse Kafka message : {}", e.getMessage(), e);
                         return Mono.empty();
                     }
                 })

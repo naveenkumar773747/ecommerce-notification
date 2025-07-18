@@ -16,11 +16,10 @@ public class OrderService {
         this.orderRepository = orderRepository;
     }
 
-    public Mono<Void> updateOrderStatusEnum(String orderId) {
-
-        return orderRepository.updateStatusById(orderId, OrderStatusEnum.CONFIRMED)
-                .doOnSuccess(any -> log.info("Order Status updated to Confirmed for id : {}", orderId))
-                .doOnError(err -> log.error("Error occurred while updating order status for id : {}", orderId));
+    public Mono<Void> updateOrderStatusEnum(String orderId, OrderStatusEnum orderStatus) {
+        return orderRepository.updateStatusById(orderId, orderStatus)
+                .doOnSuccess(any -> log.info("Order Status updated to {} for id : {}", orderStatus, orderId))
+                .doOnError(err -> log.error("Error occurred while updating order status to : {} for id : {}", orderStatus, orderId));
     }
 }
 
