@@ -1,7 +1,5 @@
 package com.ecommerce.notification.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +21,7 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
 
-    @Value("${spring.kafka.topic.order}")
+    @Value("${spring.kafka.topic.notification}")
     private String topic;
 
     @Bean
@@ -34,6 +32,7 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
 
         ReceiverOptions<String, String> options = ReceiverOptions.create(props);
         return options.subscription(Collections.singleton(topic));
@@ -42,12 +41,5 @@ public class KafkaConsumerConfig {
     @Bean
     public KafkaReceiver<String, String> kafkaReceiver(ReceiverOptions<String, String> options) {
         return KafkaReceiver.create(options);
-    }
-
-    @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        return mapper;
     }
 }
