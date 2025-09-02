@@ -37,37 +37,8 @@ public class OrderNotificationListener {
                         NotificationEvent event = objectMapper.readValue(message, NotificationEvent.class);
                         log.info("Consumed event : {}", event);
 
-                        Mono<Void> processingMono;
-
-                        switch (event.getStatus()) {
-                            case PLACED -> processingMono =
-                                    notificationService.sendOrderPlacedNotification(
-                                            event
-                                    ).then();
-
-                            case CONFIRMED -> processingMono =
-                                    notificationService.sendPaymentConfirmedNotification(
-                                            event
-                                    ).then();
-
-                            case COMPLETED -> processingMono =
-                                    notificationService.sendDeliveryCompletedNotification(
-                                            event
-                                    ).then();
-
-                            case CANCELLED -> processingMono =
-                                    notificationService.sendOrderCancelledNotification(
-                                            event
-                                    ).then();
-
-                            default -> {
-                                log.info("Skipping unsupported order status: {}", event.getStatus());
-                                record.receiverOffset().acknowledge();
-                                return Mono.empty(); // no-op
-                            }
-                        }
-
-                        return processingMono
+                        return notificationService.sendEmail(event)
+                                .then()
                                 .doOnSuccess(unused -> record.receiverOffset().acknowledge())
                                 .doOnError(error -> log.error("Processing failed: {}", error.getMessage(), error));
 

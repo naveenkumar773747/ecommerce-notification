@@ -17,35 +17,19 @@ public class NotificationService {
     @Autowired
     private JavaMailSender mailSender;
 
-    public Mono<Void> sendOrderPlacedNotification(NotificationEvent event) {
-        return sendEmail(event.getBillingEmail(), "E-COMMERCE : Order Placed", event);
-    }
-
-    public Mono<Void> sendPaymentConfirmedNotification(NotificationEvent event) {
-        return sendEmail(event.getBillingEmail(), "E-COMMERCE : Payment Confirmed", event);
-    }
-
-    public Mono<Void> sendDeliveryCompletedNotification(NotificationEvent event) {
-        return sendEmail(event.getBillingEmail(), "E-COMMERCE : Order Delivered", event);
-    }
-
-    public Mono<Void> sendOrderCancelledNotification(NotificationEvent event) {
-        return sendEmail(event.getBillingEmail(), "E-COMMERCE : Order Cancelled", event);
-    }
-
-    private Mono<Void> sendEmail(String to, String subject, NotificationEvent event) {
+    public Mono<Void> sendEmail(NotificationEvent event) {
         log.info("Sending order update mail to {} : {}", event.getBillingName(), event);
 
         return Mono.fromRunnable(() -> {
                     SimpleMailMessage message = new SimpleMailMessage();
-                    message.setTo(to);
-                    message.setSubject(subject);
+                    message.setTo(event.getBillingEmail());
+                    message.setSubject(generateEmailSubject(event));
                     message.setText(generateEmailBody(event));
                     mailSender.send(message);
                 })
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnSuccess(unused -> log.info("Email sent successfully for {}", subject))
-                .doOnError(error -> log.error("Failed to send email for {}", subject, error))
+                .doOnSuccess(unused -> log.info("Email sent successfully for {} event", event.getStatus()))
+                .doOnError(error -> log.error("Failed to send email for {} event with error", event.getStatus(), error))
                 .then();
     }
 
@@ -103,6 +87,21 @@ public class NotificationService {
                     event.getOrderId());
 
             default -> "Order status not recognized.";
+        };
+    }
+
+    private String generateEmailSubject(NotificationEvent event) {
+
+        return switch (event.getStatus()) {
+            case PLACED -> "E-COMMERCE : Order Placed";
+
+            case CONFIRMED -> "E-COMMERCE : Payment Confirmed";
+
+            case COMPLETED -> "E-COMMERCE : Order Delivered";
+
+            case CANCELLED -> "E-COMMERCE : Order Cancelled";
+
+            default -> "Order status not recognized";
         };
     }
 
